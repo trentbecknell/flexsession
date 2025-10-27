@@ -1,0 +1,246 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String             @id @default(cuid())
+  email             String             @unique
+  emailVerified     DateTime?
+  name              String?
+  image             String?
+  role              UserRole           @default(ARTIST)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  stripeCustomerId  String?
+  
+  profile           Profile?
+  sessions          Session[]          @relation("UserSessions")
+  engineerSlots     AvailabilitySlot[] @relation("EngineerSlots")
+  messages          Message[]          @relation("UserMessages")
+  payoutAccount     PayoutAccount?
+  accounts          Account[]
+  
+  @@index([email])
+  @@index([role])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Profile {
+  id            String       @id @default(cuid())
+  userId        String       @unique
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  headline      String?
+  bio           String?      @db.Text
+  skills        String[]     // Array of skill strings
+  genres        String[]     // Array of genre strings
+  hourlyRate    Int          // cents
+  rushRate      Int?         // cents (for <24h bookings)
+  minBlockHours Int          @default(1) // 1, 2, 3, or 4
+  instantBook   Boolean      @default(true)
+  city          String?
+  country       String?
+  inviteStatus  InviteStatus @default(APPROVED)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  
+  credits       Credit[]
+  samples       Sample[]
+  calendar      CalendarConfig?
+  
+  @@index([userId])
+  @@index([inviteStatus])
+}
+
+model Credit {
+  id        String  @id @default(cuid())
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  title     String
+  role      String
+  year      Int?
+  link      String?
+  
+  @@index([profileId])
+}
+
+model Sample {
+  id        String  @id @default(cuid())
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  title     String
+  url       String
+  createdAt DateTime @default(now())
+  
+  @@index([profileId])
+}
+
+model AvailabilitySlot {
+  id          String      @id @default(cuid())
+  engineerId  String
+  engineer    User        @relation("EngineerSlots", fields: [engineerId], references: [id], onDelete: Cascade)
+  start       DateTime
+  end         DateTime
+  taskType    TaskType
+  mode        BookingMode @default(INSTANT)
+  isPublished Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  session     Session?
+  
+  @@index([engineerId])
+  @@index([start, end])
+  @@index([isPublished])
+}
+
+model Session {
+  id               String        @id @default(cuid())
+  slotId           String        @unique
+  slot             AvailabilitySlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  artistId         String
+  artist           User          @relation("UserSessions", fields: [artistId], references: [id], onDelete: Cascade)
+  status           SessionStatus @default(PENDING)
+  notes            String?       @db.Text
+  priceCents       Int
+  stripePaymentId  String?
+  stripeCheckoutId String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  
+  files            FileAsset[]
+  thread           MessageThread?
+  
+  @@index([artistId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model FileAsset {
+  id         String   @id @default(cuid())
+  sessionId  String
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  kind       FileKind
+  url        String
+  filename   String
+  sizeBytes  Int
+  uploadedBy String
+  createdAt  DateTime @default(now())
+  
+  @@index([sessionId])
+}
+
+model MessageThread {
+  id        String    @id @default(cuid())
+  sessionId String    @unique
+  session   Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  messages  Message[]
+  createdAt DateTime  @default(now())
+}
+
+model Message {
+  id        String        @id @default(cuid())
+  threadId  String
+  thread    MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User          @relation("UserMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  body      String        @db.Text
+  createdAt DateTime      @default(now())
+  
+  @@index([threadId])
+  @@index([createdAt])
+}
+
+model CalendarConfig {
+  id            String        @id @default(cuid())
+  profileId     String        @unique
+  profile       Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  gcalConnected Boolean       @default(false)
+  gcalEmail     String?
+  syncDirection SyncDirection @default(IMPORT_ONLY)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model PayoutAccount {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeAccountId String
+  onboardingComplete Boolean @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+enum UserRole {
+  ARTIST
+  ENGINEER
+  ADMIN
+}
+
+enum TaskType {
+  MIX_TWEAK
+  MASTER_QC
+  VOCAL_EDIT
+  PROD_ASSIST
+  ARRANGE_FEEDBACK
+}
+
+enum BookingMode {
+  INSTANT
+  REQUEST
+}
+
+enum SessionStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  DELIVERED
+  COMPLETED
+  CANCELED
+  DECLINED
+}
+
+enum FileKind {
+  STEM
+  REF
+  MIX
+  MASTER
+  DOC
+}
+
+enum InviteStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SyncDirection {
+  IMPORT_ONLY
+}

@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 25% 95%; /* paper */
+    --foreground: 0 0% 14%; /* ink */
+
+    --card: 40 25% 95%;
+    --card-foreground: 0 0% 14%;
+
+    --popover: 40 25% 95%;
+    --popover-foreground: 0 0% 14%;
+
+    --primary: 35 36% 58%; /* accent */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 35 18% 76%; /* tape */
+    --secondary-foreground: 0 0% 14%;
+
+    --muted: 35 18% 76%;
+    --muted-foreground: 0 0% 35%;
+
+    --accent: 35 36% 58%;
+    --accent-foreground: 0 0% 14%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 35 18% 76%;
+    --input: 35 18% 76%;
+    --ring: 35 36% 58%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 0 0% 14%;
+    --foreground: 40 25% 95%;
+
+    --card: 0 0% 14%;
+    --card-foreground: 40 25% 95%;
+
+    --popover: 0 0% 14%;
+    --popover-foreground: 40 25% 95%;
+
+    --primary: 35 36% 58%;
+    --primary-foreground: 0 0% 14%;
+
+    --secondary: 35 18% 40%;
+    --secondary-foreground: 40 25% 95%;
+
+    --muted: 0 0% 25%;
+    --muted-foreground: 0 0% 65%;
+
+    --accent: 35 36% 58%;
+    --accent-foreground: 0 0% 14%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 40 25% 95%;
+
+    --border: 0 0% 25%;
+    --input: 0 0% 25%;
+    --ring: 35 36% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-paper text-ink font-sans;
+    position: relative;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/grain.svg');
+    background-repeat: repeat;
+    opacity: 0.05;
+    pointer-events: none;
+    z-index: 9999;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+
+@layer utilities {
+  .tape-strip {
+    @apply bg-tape/20 border border-tape rounded-sm px-3 py-2 text-sm;
+    @apply hover:bg-tape/30 transition-colors duration-200;
+  }
+  
+  .tape-strip-instant {
+    @apply border-accent/50 bg-accent/10;
+  }
+  
+  .tape-strip-request {
+    @apply border-tape/50 bg-tape/10;
+  }
+}
